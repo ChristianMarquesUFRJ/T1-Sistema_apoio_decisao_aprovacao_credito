@@ -15,14 +15,21 @@ import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import LabelBinarizer, MinMaxScaler
 from matplotlib import pyplot as plt
-from sklearn.model_selection import train_test_split, cross_val_score, cross_val_predict
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.ensemble import RandomForestClassifier
 
 
 #################################################################################
 # Decisão se o código vai rodar como predição ou validação
 #################################################################################
-MODE_VALIDATION = False
-# MODE_VALIDATION = True
+MODE_VALIDATION = True
+MODE_CROSS_VALIDATION = False
+
+# MODE_VALIDATION = False
+# MODE_CROSS_VALIDATION = True
+
+# MODE_VALIDATION = False
+# MODE_CROSS_VALIDATION = False
 
 #################################################################################
 # Leitura dos arquivos de input
@@ -61,7 +68,8 @@ def filter_best_params(data, is_train):
         'profissao_companheiro',
         'grau_instrucao_companheiro',
         'local_onde_reside',
-        'local_onde_trabalha']
+        'local_onde_trabalha'
+        ]
 
     output = ['inadimplente']
 
@@ -189,13 +197,19 @@ def adjust_scale(data):
 #################################################################################
 
 #-------------------------------------------------------------------------------
-# Treinamento do classificador KNN com o conjunto de treino
+# Treinamento do classificador com o conjunto de treino
 #-------------------------------------------------------------------------------
-def train(x_train, y_train, _n_neighbors, _p):
+def train_KNN(x_train, y_train, _n_neighbors, _p):
     model = KNeighborsClassifier(
         n_neighbors = _n_neighbors,
         weights     = 'uniform',
         p           = _p)
+    return model.fit(x_train,y_train)
+
+def train_Random_Forest(x_train, y_train, depth):
+    model = RandomForestClassifier(
+            max_depth=depth, 
+            random_state=0)
     return model.fit(x_train,y_train)
 
 #-------------------------------------------------------------------------------
@@ -204,24 +218,65 @@ def train(x_train, y_train, _n_neighbors, _p):
 def predict(model, data):
     return model.predict(data)
 
-
 #-------------------------------------------------------------------------------
 # Validação do sistema com os dados usados (fazendo uso do treinamento cruzado)
 #-------------------------------------------------------------------------------
 def validation(x, y):
     print('\n\n\n')
     print ( "\nVALIDAÇÃO DO MODELO")
+
+    x_train, x_test, y_train, y_test = train_test_split(
+        x,
+        y,
+        test_size = 0.2,
+        random_state = 0   
+        )
+
+    # Treinamento com KNN
+    # k, p = 97, 1
+    # model_trained = train_KNN(x_train, y_train, k, p)
+    # Treinamento com Random Forest
+    depth = 4
+    model_trained = train_Random_Forest(x_train, y_train, depth)
+
+    # Predição
+    y_predict_train = predict(model_trained, x_train)
+    y_predict_test = predict(model_trained, x_test)
+
+    # Indicação da acurácia do treino
+    scoring(y_train, y_predict_train)
+    scoring(y_test, y_predict_test)
+        
+def cross_validation_KNN(x, y):
+    print('\n\n\n')
+    print ( "\nVALIDAÇÃO CRUZADA DO MODELO")
     print ( "\n  K   ACERTO(%)")
     print ( " --   ------")
-    for k in range(31,120,2):
+    cross_val = 5
+    for k in range(97,100,2):
         classificator = KNeighborsClassifier(
             n_neighbors = k,
             weights     = 'uniform',
             p           = 1)
 
-        scores = cross_val_score(classificator, x, y, cv=10)
+        scores = cross_val_score(classificator, x, y, cv=cross_val)
         
-        print ('k = %2d' % k, 'Acurácia média = %6.1f' % (100*sum(scores)/8))
+        print ('k = %2d' % k, 'Acurácia média = %6.1f' % (100*sum(scores)/cross_val))
+        
+def cross_validation_Random_Forest(x, y):
+    print('\n\n\n')
+    print ( "\nVALIDAÇÃO CRUZADA DO MODELO")
+    print ( "\n  D   ACERTO(%)")
+    print ( " --   ------")
+
+    cross_val = 5
+
+    for depth in range(3,5):
+        classificator = train_Random_Forest(x, y, depth)
+
+        scores = cross_val_score(classificator, x, y, cv=cross_val)
+        
+        print (' %2d' % depth, 'Acurácia média = %6.1f' % (100*sum(scores)/cross_val))
 
 
 #################################################################################
@@ -258,10 +313,12 @@ def preprocessing(data):
 
 def scoring(real, predict):
     score = sum(real==predict)/len(predict)
-    print('\n\n\n')
-    print("===> Acurácia do treino: %6.1f %%" % (100*score))
+    ## print('\n\n\n')
+    print("===> Acurácia: %6.1f %%" % (100*score))
 
 if __name__ == "__main__":
+    pd.set_option("mode.chained_assignment", None)
+
     # Le os dados dos arquivos e transforma em dataframes
     input_train_data = get_data('data\conjunto_de_treinamento.csv')
     input_test_data = get_data('data\conjunto_de_teste.csv')
@@ -289,10 +346,16 @@ if __name__ == "__main__":
 
     if (MODE_VALIDATION):
         validation(x_train, y_train)
+    elif (MODE_CROSS_VALIDATION):
+        # cross_validation_KNN(x_train, y_train)
+        cross_validation_Random_Forest(x_train, y_train)
     else:
-        # Treinamento
-        k, p = 97, 1
-        model_trained = train(x_train, y_train, k, p)
+        # Treinamento com KNN
+        # k, p = 97, 1
+        # model_trained = train_KNN(x_train, y_train, k, p)
+        # Treinamento com Random Forest
+        depth = 3
+        model_trained = train_Random_Forest(x_train, y_train, depth)
 
         # Predição
         y_predict_train = predict(model_trained, x_train)
