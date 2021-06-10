@@ -10,23 +10,27 @@
 #################################################################################
 # Importação de bibliotecas
 #################################################################################
-import pandas as pd
-import numpy as np
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.preprocessing import LabelBinarizer, MinMaxScaler
-from matplotlib import pyplot as plt
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.ensemble import RandomForestClassifier
-
+import pandas   as pd
+import numpy    as np
+import seaborn  as sns; sns.set()
+from sklearn.neighbors          import KNeighborsClassifier
+from sklearn.preprocessing      import LabelBinarizer, MinMaxScaler, PolynomialFeatures
+from matplotlib                 import pyplot as plt
+from sklearn.model_selection    import train_test_split, cross_val_score
+from sklearn.ensemble           import RandomForestClassifier
+from sklearn.metrics            import confusion_matrix, accuracy_score, precision_score, r2_score
+from sklearn.metrics            import recall_score, f1_score, roc_auc_score, mean_squared_error
+from sklearn.metrics            import plot_precision_recall_curve, plot_roc_curve
+from sklearn.linear_model       import LinearRegression, Ridge, Lasso, SGDRegressor
 
 #################################################################################
 # Decisão se o código vai rodar como predição ou validação
 #################################################################################
-MODE_VALIDATION = True
-MODE_CROSS_VALIDATION = False
+# MODE_VALIDATION = True
+# MODE_CROSS_VALIDATION = False
 
-# MODE_VALIDATION = False
-# MODE_CROSS_VALIDATION = True
+MODE_VALIDATION = False
+MODE_CROSS_VALIDATION = True
 
 # MODE_VALIDATION = False
 # MODE_CROSS_VALIDATION = False
@@ -40,6 +44,17 @@ def get_data(path):
 #################################################################################
 # Preprocessamento
 #################################################################################
+
+#-------------------------------------------------------------------------------
+# Visualização da correlação dos parâmetros usados
+#-------------------------------------------------------------------------------
+def show_correlation_matrix(data):
+    print("\n\n")
+    print("MATRIZ DE CORRELAÇÃO:")
+    corrMatrix = data.corr()
+    sns.heatmap(corrMatrix, xticklabels=1, yticklabels=1, vmin=0, vmax=1)
+    plt.show()
+    print("\n\n")
 
 #-------------------------------------------------------------------------------
 # Elimincação das colunas não utilizadas
@@ -58,16 +73,33 @@ def filter_best_params(data, is_train):
         'meses_na_residencia',
         'renda_mensal_regular',
         'renda_extra',
+
+
+        # 'possui_email',
+        'tipo_endereco',
+        # 'dia_vencimento',
+        'possui_telefone_residencial',
+        # 'qtde_contas_bancarias_especiais',
+        'forma_envio_solicitacao',
+        'meses_no_trabalho',
+
+        # 'possui_cartao_visa',
+        'possui_cartao_mastercard',
+        'possui_cartao_diners',
+        # 'possui_cartao_amex',
+        'possui_outros_cartoes',
+
+
         'qtde_contas_bancarias',
         'valor_patrimonio_pessoal',
-        'possui_carro',
+        # 'possui_carro',
         'vinculo_formal_com_empresa',
-        'possui_telefone_trabalho',
+        # 'possui_telefone_trabalho',
         'profissao',
         'ocupacao',
-        'profissao_companheiro',
-        'grau_instrucao_companheiro',
-        'local_onde_reside',
+        # 'profissao_companheiro',
+        # 'grau_instrucao_companheiro',
+        # 'local_onde_reside',
         'local_onde_trabalha'
         ]
 
@@ -86,23 +118,23 @@ def filter_best_params(data, is_train):
 # FORMATAÇÃO DOS DADOS
 # --------------------------------------
 def pretrain_format_data(data):
-    data["sexo"].replace({" ": "N"}, inplace=True)
-    data["estado_onde_nasceu"].replace({" ": "XX"}, inplace=True)
-    data["tipo_residencia"].replace({np.nan: 6}, inplace=True)
-    data["meses_na_residencia"].replace({np.nan: 0}, inplace=True)
-    data["profissao"].replace({np.nan: 19}, inplace=True)
-    data["ocupacao"].replace({np.nan: 6}, inplace=True)
-    data["profissao_companheiro"].replace({np.nan: 18}, inplace=True)
-    data["grau_instrucao_companheiro"].replace({np.nan: 6}, inplace=True)
+    data["sexo"].replace({" ": data["sexo"].mode()}, inplace=True)
+    data["estado_onde_nasceu"].replace({" ": data["estado_onde_nasceu"].mode()}, inplace=True)
+    data["tipo_residencia"].replace({np.nan: int(data["tipo_residencia"].mode())}, inplace=True)
+    data["meses_na_residencia"].replace({np.nan: int(data["meses_na_residencia"].mode())}, inplace=True)
+    data["profissao"].replace({np.nan: int(data["profissao"].mode())}, inplace=True)
+    data["ocupacao"].replace({np.nan: int(data["ocupacao"].mode())}, inplace=True)
+    # data["profissao_companheiro"].replace({np.nan: 18}, inplace=True)
+    # data["grau_instrucao_companheiro"].replace({np.nan: 6}, inplace=True)
     return data
 
 # ALTERAÇÃO DE DADOS
 # --------------------------------------
 def pretrain_change_data(data):
-    # # Organização do CEP nas regiões macros (a partir dos primeiros digitos)
+    # Organização do CEP nas regiões macros (a partir dos primeiros digitos)
     # for index in range(0, 10):
-    #     data.loc[data["local_onde_reside"] // 100 == index , "local_onde_reside"] = index
-    #     data.loc[data["local_onde_trabalha"] // 100 == index , "local_onde_trabalha"] = index
+        # data.loc[data["local_onde_reside"] // 100 == index , "local_onde_reside"] = index
+        # data.loc[data["local_onde_trabalha"] // 100 == index , "local_onde_trabalha"] = index
 
     # # Unir a informação "estado_onde_nasceu" e "estado_onde_reside" em uma coluna binarizada: se reside no estado em que nasceu
     # data['mora_onde_nasceu'] = np.where(data['estado_onde_nasceu'] == data['estado_onde_reside'], 1, 0)
@@ -114,7 +146,7 @@ def pretrain_change_data(data):
 # --------------------------------------
 def pretrain_data_binarizer(data):
     binarizer = LabelBinarizer()
-    for param in ['possui_carro','vinculo_formal_com_empresa', 'possui_telefone_trabalho']:
+    for param in ['possui_telefone_residencial','vinculo_formal_com_empresa']:#, 'possui_carro', 'possui_telefone_trabalho']:
         data[param] = binarizer.fit_transform(data[param])
     return data
 
@@ -128,10 +160,14 @@ def pretrain_data_one_hot_encoding(data):
     data = pd.get_dummies(data,columns=['tipo_residencia'])
     data = pd.get_dummies(data,columns=['profissao'])
     data = pd.get_dummies(data,columns=['ocupacao'])
-    data = pd.get_dummies(data,columns=['profissao_companheiro'])
-    data = pd.get_dummies(data,columns=['grau_instrucao_companheiro'])
-    data = pd.get_dummies(data,columns=['local_onde_reside'])
+    # data = pd.get_dummies(data,columns=['profissao_companheiro'])
+    # data = pd.get_dummies(data,columns=['grau_instrucao_companheiro'])
+    # data = pd.get_dummies(data,columns=['local_onde_reside'])
     data = pd.get_dummies(data,columns=['local_onde_trabalha'])
+
+    
+    data = pd.get_dummies(data,columns=['forma_envio_solicitacao'])
+    # data = pd.get_dummies(data,columns=['tipo_endereco'])
     return data
 
 
@@ -144,7 +180,7 @@ def pretrain_data_one_hot_encoding(data):
 # Embaralhamento dos dados
 #-------------------------------------------------------------------------------
 def shuffle_data(data):
-    return data.sample(frac=1,random_state=12345)
+    return data.sample(frac=1,random_state=0)
 
 #-------------------------------------------------------------------------------
 # Remoção de dados que existem no treino e não existem no teste
@@ -153,7 +189,7 @@ def drop_difference_param_train_test(my_data, other_data):
     params = my_data.columns.difference(other_data.columns)
     params = params.to_numpy().tolist()
 
-    print("\n\n", params, "\n\n")
+    # print("\n\n", params, "\n\n")
 
     if ('inadimplente' in params):
         params.remove('inadimplente')
@@ -212,11 +248,53 @@ def train_Random_Forest(x_train, y_train, depth):
             random_state=0)
     return model.fit(x_train,y_train)
 
+def adjust_params_Polynomial_Regression(x, deg):
+    pf = PolynomialFeatures(degree=deg)
+    return pf.fit_transform(x)
+
+def train_Linear_Regression(x_train, y_train):
+    model = LinearRegression()
+    return model.fit(x_train, y_train)
+
+def train_Lasso(x_train, y_train, alp):
+    model = Lasso(
+            alpha=alp, 
+            random_state=0)
+    return model.fit(x_train,y_train)
+
+def train_Ridge(x_train, y_train, alp):
+    model = Ridge(
+            alpha=alp, 
+            random_state=0)
+    return model.fit(x_train,y_train)
+
+def train_SGD(x_train, y_train, alp, tolerance):
+    model = SGDRegressor(
+            alpha=alp, 
+            loss='squared_loss', # squared_loss, huber, epsilon_insensitive, squared_epsilon_insensitive
+            penalty='elasticnet', # l2, l1, elasticnet
+            tol=tolerance,
+            max_iter=100000,
+            random_state=0)
+    return model.fit(x_train,y_train)
+
 #-------------------------------------------------------------------------------
 # Predição do resultado com o classificador treinado
 #-------------------------------------------------------------------------------
 def predict(model, data):
-    return model.predict(data)
+    y_predict = model.predict(data)
+    size = len(y_predict)
+    y = [0]*size
+
+    if (y_predict.dtype == np.dtype('float64')):
+        threshold = 0.5
+        for i in range(size):
+            y[i] = 1 if (y_predict[i] >= threshold) else 0
+        y = np.array(y)
+    else:
+        y = y_predict
+
+    return y
 
 #-------------------------------------------------------------------------------
 # Validação do sistema com os dados usados (fazendo uso do treinamento cruzado)
@@ -228,24 +306,48 @@ def validation(x, y):
     x_train, x_test, y_train, y_test = train_test_split(
         x,
         y,
-        test_size = 0.2,
+        test_size = 0.1,
         random_state = 0   
         )
 
+    # --------
     # Treinamento com KNN
     # k, p = 97, 1
     # model_trained = train_KNN(x_train, y_train, k, p)
+
     # Treinamento com Random Forest
-    depth = 4
+    depth = 25
     model_trained = train_Random_Forest(x_train, y_train, depth)
+
+    # Treinamento com Regressão com regularização Lasso
+    # degree = 2
+    # x_train = adjust_params_Polynomial_Regression(x_train, degree)
+    # x_test = adjust_params_Polynomial_Regression(x_test, degree)
+    # Regressão linear
+    # model_trained = train_Linear_Regression(x_train, y_train)
+    # Lasso
+    # alpha = 0.001
+    # model_trained = train_Lasso(x_train, y_train, alpha)
+    # Ridge
+    # alpha = 0.001
+    # model_trained = train_Ridge(x_train, y_train, alpha)
+    # SGD
+    # alpha, tolerance = 0.001, 1e-6
+    # model_trained = train_SGD(x_train, y_train, alpha, tolerance)
+    
+    # --------
 
     # Predição
     y_predict_train = predict(model_trained, x_train)
     y_predict_test = predict(model_trained, x_test)
 
     # Indicação da acurácia do treino
-    scoring(y_train, y_predict_train)
-    scoring(y_test, y_predict_test)
+    # scoring(y_train, y_predict_train)
+    # scoring(y_test, y_predict_test)
+
+    show_metrics(y_test, y_predict_test)
+    rmse, r2 = get_error_metrics (y_test, y_predict_test)
+    print('\n Depth =%2d  RMSE = %2.4f  R2 = %2.4f' % (depth, rmse, r2))
         
 def cross_validation_KNN(x, y):
     print('\n\n\n')
@@ -253,7 +355,7 @@ def cross_validation_KNN(x, y):
     print ( "\n  K   ACERTO(%)")
     print ( " --   ------")
     cross_val = 5
-    for k in range(97,100,2):
+    for k in range(1,120,2):
         classificator = KNeighborsClassifier(
             n_neighbors = k,
             weights     = 'uniform',
@@ -271,12 +373,36 @@ def cross_validation_Random_Forest(x, y):
 
     cross_val = 5
 
-    for depth in range(3,5):
+    for depth in range(15,30):
         classificator = train_Random_Forest(x, y, depth)
 
         scores = cross_val_score(classificator, x, y, cv=cross_val)
         
         print (' %2d' % depth, 'Acurácia média = %6.1f' % (100*sum(scores)/cross_val))
+        
+def cross_validation_Polynomial_Regression(x, y):
+    print('\n\n\n')
+    print ( "\nVALIDAÇÃO CRUZADA DO MODELO")
+    print ( "\n  G   ACERTO(%)")
+    print ( " --   ------")
+
+    for degree in range(1,3):
+        x = adjust_params_Polynomial_Regression(x, degree)
+        # Regressão linear
+        # model = train_Linear_Regression(x, y)
+        # Lasso
+        # alpha = 0.001
+        # model = train_Lasso(x, y, alpha)
+        # Ridge
+        # alpha = 0.001
+        # model = train_Ridge(x, y, alpha)
+        # SGD
+        alpha, tolerance = 0.001, 1e-6
+        model = train_SGD(x, y, alpha, tolerance)
+
+        y_pred = predict(model, x)
+        rmse, r2 = get_error_metrics (y, y_pred)
+        print('\n Degree =%2d  RMSE = %2.4f  R2 = %2.4f' % (degree, rmse, r2))
 
 
 #################################################################################
@@ -298,7 +424,30 @@ def export_to_csv(y_predict, start_id_count):
     # Salva o dataframe em um arquivo .csv sem a primeira coluna ser o indice padrão [0 a len(y_predict)]
     DF.to_csv("data.csv", index=False)
 
+def show_metrics(y_true, y_pred):
+    tp, fn, fp, tn = confusion_matrix(y_pred,y_true,labels=[True, False]).reshape(4,1)
+    print (" Matriz de Confusão : TP=%4d | FN=%4d | FP=%4d | TN=%4d" % (tp, fn, fp, tn))
+    print ("  " )
+    print (" Acurácia           : %6.1f %%" % (100*accuracy_score(y_pred,y_true)) )
+    print ("  " )   
+    print (" Precisão           : %6.1f %%" % (100*precision_score(y_pred,y_true)) )
+    print ("  " )   
+    print (" Sensibilidade      : %6.1f %%" % (100*recall_score(y_pred,y_true)) )
+    print ("  " )   
+    print (" Score F1           : %6.1f %%" % (100*f1_score(y_pred,y_true)) )
+    print ("  " )   
+    print (" Área sob ROC       : %6.1f %%" % (100*roc_auc_score(y_pred,y_true)) )
 
+
+def get_error_metrics (y_true, y_pred):
+    mse  = mean_squared_error(y_pred, y_true)
+    rmse = np.sqrt(mse)
+    r2   = r2_score(y_pred, y_true)
+    return rmse, r2
+
+def plot_curves(model, x_test, y_pred):
+    plot_roc_curve(model, x_test, y_pred)
+    plot_precision_recall_curve(model, x_test, y_pred)
 
 #################################################################################
 # Funções gerais de lógica
@@ -332,10 +481,13 @@ if __name__ == "__main__":
     test_data = preprocessing(test_data)
     
     # Remove atributos que ou o treino nao tem, ou o teste
-    # train_data = drop_difference_param_train_test(train_data, test_data)
-    # test_data = drop_difference_param_train_test(test_data, train_data)
-    test_data = add_difference_param_train_test(train_data, test_data)
-    train_data = add_difference_param_train_test(test_data, train_data)
+    train_data = drop_difference_param_train_test(train_data, test_data)
+    test_data = drop_difference_param_train_test(test_data, train_data)
+    # test_data = add_difference_param_train_test(train_data, test_data)
+    # train_data = add_difference_param_train_test(test_data, train_data)
+
+    # Mostra a relação entre os parâmetros
+    # show_correlation_matrix(train_data)
 
     # Split dos dados de input e outout do treinamento
     x_train, y_train = split_inputs_outputs(train_data, 'inadimplente')
@@ -347,22 +499,44 @@ if __name__ == "__main__":
     if (MODE_VALIDATION):
         validation(x_train, y_train)
     elif (MODE_CROSS_VALIDATION):
-        # cross_validation_KNN(x_train, y_train)
-        cross_validation_Random_Forest(x_train, y_train)
+        cross_validation_KNN(x_train, y_train)
+        # cross_validation_Random_Forest(x_train, y_train)
+        # cross_validation_Polynomial_Regression(x_train, y_train)
     else:
         # Treinamento com KNN
         # k, p = 97, 1
         # model_trained = train_KNN(x_train, y_train, k, p)
         # Treinamento com Random Forest
-        depth = 3
+        depth = 30
         model_trained = train_Random_Forest(x_train, y_train, depth)
+        # Treinamento com Regressão Polinomial
+        # degree = 2
+        # x_train = adjust_params_Polynomial_Regression(x_train, degree)
+        # x_test = adjust_params_Polynomial_Regression(x_test, degree)
+        # Regressão linear
+        # model_trained = train_Linear_Regression(x_train, y_train)
+        # Lasso
+        # alpha = 0.001
+        # model_trained = train_Lasso(x_train, y_train, alpha)
+        # Ridge
+        # alpha = 0.001
+        # model_trained = train_Ridge(x_train, y_train, alpha)
+        # SGD
+        # alpha, tolerance = 0.001, 1e-6
+        # model_trained = train_SGD(x_train, y_train, alpha, tolerance)
 
         # Predição
         y_predict_train = predict(model_trained, x_train)
         y_predict_test = predict(model_trained, x_test)
 
         # Indicação da acurácia do treino
-        scoring(y_train, y_predict_train)
+        #scoring(y_train, y_predict_train)
+        
+        # Indicação das métricas
+        show_metrics(y_train, y_predict_train)
+        rmse, r2 = get_error_metrics (y_train, y_predict_train)
+        print('\n Depth =%2d  RMSE = %2.4f  R2 = %2.4f' % (depth, rmse, r2))
+        # plot_curves(model_trained, x_test, y_predict_test)
 
         # Exportação do resultado final da predição para a planilha de resposta
         export_to_csv(y_predict_test, 20001)
