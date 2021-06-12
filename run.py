@@ -23,10 +23,7 @@ from sklearn.metrics            import recall_score, f1_score, roc_auc_score, me
 from sklearn.metrics            import plot_precision_recall_curve, plot_roc_curve
 from sklearn.linear_model       import LinearRegression, Ridge, Lasso, SGDRegressor
 from sklearn.svm                import SVR
-from sklearn.feature_selection  import VarianceThreshold
 from sklearn.feature_selection  import mutual_info_regression
-from sklearn.feature_selection  import SelectPercentile
-from sklearn.feature_selection  import SelectKBest
 
 #################################################################################
 # Decisão se o código vai rodar como predição ou validação
@@ -134,9 +131,9 @@ def pretrain_format_data(data):
 # --------------------------------------
 def pretrain_change_data(data):
     # Organização do CEP nas regiões macros (a partir dos primeiros digitos)
-    for index in range(0, 10):
-        data.loc[data["local_onde_reside"] // 100 == index , "local_onde_reside"] = index
-        data.loc[data["local_onde_trabalha"] // 100 == index , "local_onde_trabalha"] = index
+    # for index in range(0, 10):
+    #     data.loc[data["local_onde_reside"] // 100 == index , "local_onde_reside"] = index
+    #     data.loc[data["local_onde_trabalha"] // 100 == index , "local_onde_trabalha"] = index
 
     # # Unir a informação "estado_onde_nasceu" e "estado_onde_reside" em uma coluna binarizada: se reside no estado em que nasceu
     data['mora_onde_nasceu'] = np.where(data['estado_onde_nasceu'] == data['estado_onde_reside'], 1, 0)
@@ -616,7 +613,7 @@ if __name__ == "__main__":
         # alpha, tolerance = 0.01, 1e-8
         # model_trained = train_SGD(x_train, y_train, alpha, tolerance)
 
-        depth = 8
+        depth = 7
         model_trained = train_Random_Forest_R(x_train, y_train, depth)
         # model_trained = train_GridSearchCV(x_train, y_train)
         # model_trained = train_GradientBoostingRegressor(x_train, y_train)
