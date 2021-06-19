@@ -315,7 +315,11 @@ def train_SGD(x_train, y_train, alp, tolerance):
 
 def train_Random_Forest_R(x_train, y_train, depth):
     model = RandomForestRegressor(
-            max_depth=depth, 
+            max_depth=depth,
+            # max_features='log2',
+            # min_samples_split=5,
+            # min_samples_leaf=2,
+            # min_weight_fraction_leaf=0.2, 
             random_state=0)
     return model.fit(x_train,y_train)
 
@@ -436,9 +440,9 @@ def cross_validation_Random_Forest(x, y):
     for depth in range(1,16):
         classificator = train_Random_Forest_R(x, y, depth)
 
-        scores = cross_val_score(classificator, x, y, cv=cross_val)
+        scores = cross_val_score(classificator, x, y, cv=cross_val, scoring='neg_root_mean_squared_error')
         
-        print (' %2d' % depth, 'Acurácia média = %6.1f' % (100*sum(scores)/cross_val))
+        print (' %2d' % depth, 'RMSE = %6.1f' % (100*sum(scores)/cross_val))
         
 def cross_validation_Polynomial_Regression(x, y):
     print('\n\n\n')
@@ -575,7 +579,7 @@ if __name__ == "__main__":
     mutual_info = pd.Series(mutual_info)
     mutual_info.index = x_train.columns
     mutual_info = mutual_info.sort_values(ascending=False)
-    mutual_info.plot.bar(figsize=(15,5))
+    # mutual_info.plot.bar(figsize=(15,5))
     # Seleção dos parametros que influenciam no resultado final
     selected_top_columns = []
     for x in range(len(mutual_info)):
