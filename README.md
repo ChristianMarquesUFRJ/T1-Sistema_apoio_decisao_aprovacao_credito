@@ -25,7 +25,7 @@ Deste modo, foi implementado um trecho de código na função *main* que utilili
 ## 4.1. Escolha do modelo preditivo
 Como é possível ver no código foram testados 2 classificadores e 8 regressores (na função desenvolvida *predict*, havia uma transformação da resposta final de valores contínuos em binários).
 
-Os **classificadores* testados foram: *KNN* e o *Random Forest Classifier*, mas não apresentaram resultados muito bons assim, partiu-se para a utilização de um regressor com essa conversão final para um resultado final classificado.
+Os **classificadores** testados foram: *KNN* e o *Random Forest Classifier*, mas não apresentaram resultados muito bons assim, partiu-se para a utilização de um regressor com essa conversão final para um resultado final classificado.
 
 Já os **regressores** testados foram: *Linear Regresssion*, *Lasso*, *Ridge*, *SGD*, *Grid Search CV*, *Gradient Boosting Regressor*, *Ada Boost Regressor* e o *Random Forest Regressor*, que aprensetou o melhor resultado.
 
